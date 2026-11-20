@@ -74,7 +74,7 @@ mod update;
 #[cfg(target_family = "wasm")]
 mod web;
 
-use fdl_core::{docxml, lang, markdown, model, palette, paste, store, time, whiteboard};
+use fdl_core::{docxml, lang, markdown, model, palette, paste, portable, store, time, whiteboard};
 
 use gpui::*;
 

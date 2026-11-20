@@ -1,5 +1,7 @@
 param(
     [string]$Iscc = 'ISCC.exe',
+    [switch]$Portable,
+    [switch]$SkipInstaller,
     [string]$CertificateThumbprint,
     [string]$TimestampUrl = 'http://time.certum.pl',
     [string]$SignTool = 'signtool.exe'
@@ -35,34 +37,55 @@ try {
     $version = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"' | Select-Object -First 1).Matches[0].Groups[1].Value
     New-Item -ItemType Directory -Force $stage | Out-Null
     Copy-Item target/dist/quiet_md.exe $stage -Force
+    Copy-Item target/dist/quiet_md_launcher.exe $stage -Force
     if (!$env:VCToolsRedistDir) { throw 'Run from a Visual Studio developer shell to locate the C++ runtime' }
     $runtime = Get-ChildItem (Join-Path $env:VCToolsRedistDir 'x64/Microsoft.VC*.CRT/vcruntime140.dll') | Select-Object -First 1
     if (!$runtime) { throw 'The redistributable x64 vcruntime140.dll was not found' }
     Copy-Item $runtime.FullName $stage -Force
-    $compilerArgs = @("/DAppVersion=$version", "/DAppSource=$stage", "/O$stage")
-    if ($signed) {
-        $signScript = Join-Path $PSScriptRoot 'sign-windows-file.ps1'
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $signScript -FilePath "$stage/quiet_md.exe" -CertificateThumbprint $CertificateThumbprint -TimestampUrl $TimestampUrl -SignTool $SignTool
-        if ($LASTEXITCODE -ne 0) { throw 'Application signing failed' }
-        # Inno expands $q/$f itself; escape literal dollar signs in local paths.
-        $ps = (Get-Command powershell.exe -CommandType Application).Source.Replace('$', '$$')
-        $scriptPath = $signScript.Replace('$', '$$')
-        $toolPath = $SignTool.Replace('$', '$$')
-        $signCommand = '$q{0}$q -NoProfile -ExecutionPolicy Bypass -File $q{1}$q -CertificateThumbprint {2} -TimestampUrl $q{3}$q -SignTool $q{4}$q -FilePath $f' -f $ps, $scriptPath, $CertificateThumbprint, $TimestampUrl, $toolPath
-        $compilerArgs += @('/DSigned', "/Squietmd=$signCommand")
-    }
-    & $Iscc @compilerArgs packaging/windows/quiet-md.iss
-    if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
-    $name = "quiet-md-$version-windows-x64-setup.exe"
-    $installer = Join-Path $stage $name
-    if ($signed) {
-        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $signScript -VerifyOnly -FilePath $installer -CertificateThumbprint $CertificateThumbprint -TimestampUrl $TimestampUrl -SignTool $SignTool
-        if ($LASTEXITCODE -ne 0) { throw 'Installer signature verification failed' }
-    }
-    $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
-    [System.IO.File]::WriteAllText("$installer.sha256", "$hash  $name`n", [System.Text.Encoding]::ASCII)
-    Copy-Item $installer, "$installer.sha256" $output -Force
+    Copy-Item LICENSE, THIRD_PARTY.md $stage -Force
     # Debug symbols for the logged panic addresses; kept, not published.
     Copy-Item target/dist/quiet_md.pdb (Join-Path $output "quiet-md-$version-windows-x64.pdb") -Force
-    Write-Output "$mode installer: $(Join-Path $output $name)"
+    if ($Portable) {
+        # 便携版: 根目录是启动器 `quiet_md.exe` 和一个空的 `portable` 标记,
+        # 程序本体与运行库在 `Program/`,用户文件都在 `<根>/Data`。
+        $pkg = Join-Path $output ([guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Force (Join-Path $pkg 'Program') | Out-Null
+        Copy-Item (Join-Path $stage 'quiet_md_launcher.exe') (Join-Path $pkg 'quiet_md.exe') -Force
+        Copy-Item (Join-Path $stage 'quiet_md.exe') (Join-Path $pkg 'Program/quiet_md.exe') -Force
+        Copy-Item (Join-Path $stage 'vcruntime140.dll') (Join-Path $pkg 'Program/vcruntime140.dll') -Force
+        Copy-Item (Join-Path $stage 'LICENSE'), (Join-Path $stage 'THIRD_PARTY.md') $pkg -Force
+        New-Item -ItemType File -Force (Join-Path $pkg 'portable') | Out-Null
+        $zipName = "quiet-md-$version-windows-x64-portable.zip"
+        $zip = Join-Path $output $zipName
+        Compress-Archive -Path (Join-Path $pkg '*') -DestinationPath $zip -Force
+        $zipHash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+        [System.IO.File]::WriteAllText("$zip.sha256", "$zipHash  $zipName`n", [System.Text.Encoding]::ASCII)
+        Write-Output "$mode portable: $zip"
+    }
+    if (!$SkipInstaller) {
+        $compilerArgs = @("/DAppVersion=$version", "/DAppSource=$stage", "/O$stage")
+        if ($signed) {
+            $signScript = Join-Path $PSScriptRoot 'sign-windows-file.ps1'
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $signScript -FilePath "$stage/quiet_md.exe" -CertificateThumbprint $CertificateThumbprint -TimestampUrl $TimestampUrl -SignTool $SignTool
+            if ($LASTEXITCODE -ne 0) { throw 'Application signing failed' }
+            # Inno expands $q/$f itself; escape literal dollar signs in local paths.
+            $ps = (Get-Command powershell.exe -CommandType Application).Source.Replace('$', '$$')
+            $scriptPath = $signScript.Replace('$', '$$')
+            $toolPath = $SignTool.Replace('$', '$$')
+            $signCommand = '$q{0}$q -NoProfile -ExecutionPolicy Bypass -File $q{1}$q -CertificateThumbprint {2} -TimestampUrl $q{3}$q -SignTool $q{4}$q -FilePath $f' -f $ps, $scriptPath, $CertificateThumbprint, $TimestampUrl, $toolPath
+            $compilerArgs += @('/DSigned', "/Squietmd=$signCommand")
+        }
+        & $Iscc @compilerArgs packaging/windows/quiet-md.iss
+        if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+        $name = "quiet-md-$version-windows-x64-setup.exe"
+        $installer = Join-Path $stage $name
+        if ($signed) {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $signScript -VerifyOnly -FilePath $installer -CertificateThumbprint $CertificateThumbprint -TimestampUrl $TimestampUrl -SignTool $SignTool
+            if ($LASTEXITCODE -ne 0) { throw 'Installer signature verification failed' }
+        }
+        $hash = (Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant()
+        [System.IO.File]::WriteAllText("$installer.sha256", "$hash  $name`n", [System.Text.Encoding]::ASCII)
+        Copy-Item $installer, "$installer.sha256" $output -Force
+        Write-Output "$mode installer: $(Join-Path $output $name)"
+    }
 } finally { Pop-Location }

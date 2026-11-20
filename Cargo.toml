@@ -1,6 +1,6 @@
 [package]
 name = "quiet_md"
-version = "0.1.13"
+version = "0.1.14"
 edition = "2024"
 description = "A fast, local-first rich text notes app for macOS and Windows, drawn with GPUI and compatible with Feishu DocxXML"
 license = "MIT"
@@ -8,6 +8,11 @@ readme = "README.md"
 authors = ["s1dashu"]
 keywords = ["notes", "markdown", "editor", "gpui", "local-first"]
 categories = ["text-editors"]
+
+# 便携版启动器: 单独的小 exe,放在解压目录的根,程序本体在 `Program/`。
+[[bin]]
+name = "quiet_md_launcher"
+path = "src/launcher/main.rs"
 
 # `devtools`: the FDL_SCRIPT driver for tools/harness (`cargo build --release
 # --features devtools`). Off in release builds: shipped apps cannot be scripted.

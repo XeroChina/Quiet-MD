@@ -51,6 +51,8 @@ END
     let status = std::process::Command::new("rc.exe").arg("/nologo").arg("/fo").arg(&resource).arg(&source).status().expect("Windows SDK rc.exe is required; build from a Visual Studio developer shell");
     assert!(status.success(), "Windows resource compilation failed");
     println!("cargo:rustc-link-arg-bin=quiet_md={}", resource.display());
+    // 启动器放在解压目录的根,同样带上图标,省得资源管理器里是一个空白图标。
+    println!("cargo:rustc-link-arg-bin=quiet_md_launcher={}", resource.display());
 }
 
 /// Files under assets/ the binary never reads: source art, the preview's dev

@@ -358,7 +358,7 @@ fn parsed_cache_version() -> String { format!("{}-{PARSED_CACHE}", env!("CARGO_P
 /// Beside the other things this computer keeps about `root`, in the cache folder.
 fn parsed_cache_path(root: &Path) -> PathBuf {
     let tmp = crate::vfs::temp_dir();
-    let base = if cfg!(test) || root.starts_with(&tmp) { tmp.join("quiet-md-local") } else { dirs::cache_dir().unwrap_or(tmp).join("quiet-md") };
+    let base = if cfg!(test) || root.starts_with(&tmp) { tmp.join("quiet-md-local") } else { crate::portable::cache_state_dir() };
     base.join("list").join(format!("{}.json", library_key(root)))
 }
 
@@ -620,7 +620,7 @@ fn library_key(root: &Path) -> String {
 fn local_file_for(root: &Path) -> PathBuf {
     let tmp = crate::vfs::temp_dir();
     let base = if cfg!(test) || root.starts_with(&tmp) || tmp.fs_canonicalize().is_ok_and(|t| root.starts_with(t)) { tmp.join("quiet-md-local") }
-        else { dirs::data_local_dir().unwrap_or_else(crate::vfs::temp_dir).join("quiet-md") };
+        else { crate::portable::state_dir() };
     base.join("libraries").join(format!("{}.json", library_key(root)))
 }
 
@@ -660,6 +660,8 @@ impl Store {
     pub fn default_root() -> PathBuf {
         // The web build's library lives in memory (vfs).
         if cfg!(target_family = "wasm") { return PathBuf::from("/Quiet.md") }
+        // 便携版把库放在 `<exe>/Data/Quiet.md`,整目录可带走。
+        if let Some(d) = crate::portable::data_dir() { return d.join("Quiet.md") }
         dirs::document_dir().or_else(|| dirs::home_dir().map(|h| h.join("Documents"))).unwrap_or_else(|| PathBuf::from(".")).join("Quiet.md")
     }
 
@@ -698,7 +700,7 @@ impl Store {
 
     /// The pointer to a library outside Documents; per user, never synced.
     pub fn location_file() -> PathBuf {
-        dirs::data_local_dir().unwrap_or_else(crate::vfs::temp_dir).join("quiet-md").join("library.json")
+        crate::portable::state_dir().join("library.json")
     }
 
     /// Use `root` for the rest of this run, and from now on unless
@@ -905,8 +907,8 @@ impl Store {
     }
 
     fn recovery_dir(&self) -> PathBuf {
-        dirs::data_local_dir().unwrap_or_else(crate::vfs::temp_dir)
-            .join("quiet-md/recovery").join(library_key(&self.root))
+        let base = if cfg!(test) { crate::vfs::temp_dir().join("quiet-md-local") } else { crate::portable::state_dir() };
+        base.join("recovery").join(library_key(&self.root))
     }
 
     pub fn recover_later(&self, doc: &Document) -> Result<()> {

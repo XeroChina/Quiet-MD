@@ -17,6 +17,12 @@ const REAL_FOLDERS: &str = "文档库改为真实文件夹，以标题命名，�
 /// Each version's notes: (version, [(中文, English)]). Only the running
 /// version's are shown; a version without notes shows nothing.
 const NOTES: &[(&str, &[(&str, &str)])] = &[
+    ("0.1.14", &[
+        ("便携版：根目录是启动器 quiet_md.exe，程序本体在 Program/，笔记和设置都在 Data/，整目录可以带走", "Portable: the launcher quiet_md.exe sits at the root, the program in Program/, your notes and settings in Data/ — the whole folder travels"),
+        ("根目录放一个空的 portable 文件即进入便携模式", "Drop an empty portable file in the root to turn on portable mode"),
+        ("quiet_md.exe -r 把 .md / .markdown 登记为 Quiet.md 打开", "quiet_md.exe -r registers .md / .markdown with Quiet.md"),
+        ("便携模式不自动检查更新", "Portable copies do not check for updates"),
+    ]),
     ("0.1.13", &[
         ("画板：在文档里插入，或直接打开 .excalidraw 文件", "Boards: add one to a note, or open .excalidraw files"),
         ("版本历史：「…」›「版本历史」查看以前保存的版本", "Version history: … › Version history shows earlier saves"),

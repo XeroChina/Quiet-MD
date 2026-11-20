@@ -361,8 +361,9 @@ mod webview2 {
 
     /// `Err(None)` is a plain failure, `Err(Some(_))` one with its own message.
     async fn print_in(host: HWND, page: &std::path::Path, job: Job, choice: Option<Choice>, cx: &mut AsyncApp) -> Result<bool, Option<String>> {
-        // The profile can't live next to the exe (Program Files is read-only).
-        let data = dirs::data_local_dir().unwrap_or_else(fdl_core::vfs::temp_dir).join("quiet.md").join("WebView2");
+        // The profile can't live next to the exe (Program Files is read-only);
+        // 便携版放在 `<exe>/Data` 里,那里总是可写。
+        let data = crate::portable::cache_state_dir().join("WebView2");
         let env_slot: Slot<windows::core::Result<ICoreWebView2Environment>> = Rc::default();
         let s = env_slot.clone();
         let made = unsafe {

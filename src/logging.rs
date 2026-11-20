@@ -10,9 +10,11 @@ static FILE: OnceLock<Mutex<File>> = OnceLock::new();
 static OPENED: OnceLock<PathBuf> = OnceLock::new();
 
 /// `~/Library/Logs/quiet.md` on macOS, `%LOCALAPPDATA%\quiet.md\logs` on
-/// Windows; independent of where the program itself lives.
+/// Windows; independent of where the program itself lives, except in 便携版,
+/// where the log sits in `<exe>/Data/quiet-md/logs` so the folder travels.
 pub fn dir() -> PathBuf {
     if let Some(d) = std::env::var_os("QUIET_MD_LOG_DIR") { return PathBuf::from(d) }
+    if let Some(d) = crate::portable::data_dir() { return d.join("quiet-md").join("logs") }
     #[cfg(target_os = "macos")]
     let base = dirs::home_dir().map(|h| h.join("Library").join("Logs").join("quiet.md"));
     #[cfg(not(target_os = "macos"))]
