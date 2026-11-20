@@ -55,7 +55,7 @@ mod tests {
         crate::vfs::create_dir_all(&dir).unwrap();
         let exe = dir.join("quiet_md.exe");
         assert_eq!(data_dir_from(Some(&exe)), None);
-        crate::vfs::write(&dir.join(MARKER), b"").unwrap();
+        crate::vfs::write(dir.join(MARKER), b"").unwrap();
         assert_eq!(data_dir_from(Some(&exe)), Some(dir.join("Data")));
         let _ = crate::vfs::remove_dir_all(&dir);
     }
