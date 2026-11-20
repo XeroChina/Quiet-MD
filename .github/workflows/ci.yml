@@ -143,7 +143,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
           & python scripts/check.py
           if ($LASTEXITCODE -ne 0) { throw 'Windows checks failed' }
-          & scripts/package-windows.ps1 -Iscc "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe"
+          & scripts/package-windows.ps1 -Iscc "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe" -Portable
           if ($LASTEXITCODE -ne 0) { throw 'Windows packaging failed' }
 
       - name: Upload Windows installer
@@ -154,6 +154,8 @@ jobs:
           path: |
             dist/windows/unsigned/quiet-md-*-windows-x64-setup.exe
             dist/windows/unsigned/quiet-md-*-windows-x64-setup.exe.sha256
+            dist/windows/unsigned/quiet-md-*-windows-x64-portable.zip
+            dist/windows/unsigned/quiet-md-*-windows-x64-portable.zip.sha256
           if-no-files-found: error
           retention-days: 14
 

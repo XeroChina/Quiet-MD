@@ -14,6 +14,7 @@ pub mod markdown;
 pub mod model;
 pub mod palette;
 pub mod paste;
+pub mod portable;
 pub mod store;
 pub mod table;
 pub mod time;

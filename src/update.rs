@@ -68,6 +68,11 @@ fn set(state: State, cx: &mut App) {
 
 /// Starts the periodic check.
 pub fn init(cx: &mut App) {
+    // 便携版不自动更新: 安装包会写到 %LOCALAPPDATA%,便携版应当整目录带走。
+    if crate::portable::enabled() {
+        cx.set_global(Updater { state: State::Unsupported, told: None, last: None });
+        return;
+    }
     cx.set_global(Updater { state: State::Idle, told: None, last: None });
     cx.spawn(async |cx| {
         cx.background_executor().timer(Duration::from_secs(10)).await;
@@ -91,6 +96,7 @@ pub fn check_if_stale(cx: &mut App) {
 /// failures and an up-to-date copy; the automatic check stays silent except
 /// for a toast, once per version, when there is something new.
 pub fn check(manual: bool, cx: &mut App) {
+    if crate::portable::enabled() { return }
     match state(cx) {
         // A finished download waits for 重启以更新.
         State::Checking | State::Downloading(_) | State::Ready(..) | State::Installing(_) => return,
@@ -238,10 +244,13 @@ fn signed(bytes: &[u8], signature: &str, name: &str, key: &minisign_verify::Publ
 }
 
 fn updates_dir() -> PathBuf {
+    #[cfg(target_os = "macos")]
     let base = dirs::cache_dir().unwrap_or_else(fdl_core::vfs::temp_dir);
+    #[cfg(not(target_os = "macos"))]
+    let base = crate::portable::cache_state_dir();
     if cfg!(target_os = "macos") { base.join("com.s1dashu.quietmd").join("updates") }
-    else if cfg!(target_os = "linux") { base.join("quiet.md").join("updates").join(fdl_core::vfs::process_id().to_string()) }
-    else { base.join("quiet.md").join("updates") }
+    else if cfg!(target_os = "linux") { base.join("updates").join(fdl_core::vfs::process_id().to_string()) }
+    else { base.join("updates") }
 }
 
 /// Downloads, checks the signature and (macOS) unpacks; the path to install.

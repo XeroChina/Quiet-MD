@@ -17,6 +17,11 @@ const REAL_FOLDERS: &str = "文档库改为真实文件夹，以标题命名，�
 /// Each version's notes: (version, [(中文, English)]). Only the running
 /// version's are shown; a version without notes shows nothing.
 const NOTES: &[(&str, &[(&str, &str)])] = &[
+    ("0.1.14", &[
+        ("便携模式：exe 旁放一个空的 portable 文件，笔记和设置就都写进 exe 目录下的 Data，整目录可以带走", "Portable mode: drop an empty portable file next to the exe and your notes and settings stay in Data beside it, so the whole folder travels"),
+        ("Windows 便携版安装包：quiet-md-…-windows-x64-portable.zip，解压即用", "A Windows portable zip — quiet-md-…-windows-x64-portable.zip, unzip and run"),
+        ("便携模式不自动检查更新", "Portable copies do not check for updates"),
+    ]),
     ("0.1.13", &[
         ("画板：在文档里插入，或直接打开 .excalidraw 文件", "Boards: add one to a note, or open .excalidraw files"),
         ("版本历史：「…」›「版本历史」查看以前保存的版本", "Version history: … › Version history shows earlier saves"),
