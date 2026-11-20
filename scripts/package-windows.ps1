@@ -1,6 +1,7 @@
 param(
     [string]$Iscc = 'ISCC.exe',
     [switch]$Portable,
+    [switch]$SkipInstaller,
     [string]$CertificateThumbprint,
     [string]$TimestampUrl = 'http://time.certum.pl',
     [string]$SignTool = 'signtool.exe'
@@ -53,7 +54,7 @@ try {
         [System.IO.File]::WriteAllText("$zip.sha256", "$zipHash  $zipName`n", [System.Text.Encoding]::ASCII)
         Write-Output "$mode portable: $zip"
     }
-    else {
+    if (!$SkipInstaller) {
         $compilerArgs = @("/DAppVersion=$version", "/DAppSource=$stage", "/O$stage")
         if ($signed) {
             $signScript = Join-Path $PSScriptRoot 'sign-windows-file.ps1'
