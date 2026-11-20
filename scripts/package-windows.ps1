@@ -37,19 +37,27 @@ try {
     $version = (Select-String -Path Cargo.toml -Pattern '^version = "([^"]+)"' | Select-Object -First 1).Matches[0].Groups[1].Value
     New-Item -ItemType Directory -Force $stage | Out-Null
     Copy-Item target/dist/quiet_md.exe $stage -Force
+    Copy-Item target/dist/quiet_md_launcher.exe $stage -Force
     if (!$env:VCToolsRedistDir) { throw 'Run from a Visual Studio developer shell to locate the C++ runtime' }
     $runtime = Get-ChildItem (Join-Path $env:VCToolsRedistDir 'x64/Microsoft.VC*.CRT/vcruntime140.dll') | Select-Object -First 1
     if (!$runtime) { throw 'The redistributable x64 vcruntime140.dll was not found' }
     Copy-Item $runtime.FullName $stage -Force
+    Copy-Item LICENSE, THIRD_PARTY.md $stage -Force
     # Debug symbols for the logged panic addresses; kept, not published.
     Copy-Item target/dist/quiet_md.pdb (Join-Path $output "quiet-md-$version-windows-x64.pdb") -Force
     if ($Portable) {
-        # 便携版: exe 旁放一个空的 `portable` 标记,状态全部写进 `<exe>/Data`。
-        Copy-Item LICENSE, THIRD_PARTY.md $stage -Force
-        New-Item -ItemType File -Force (Join-Path $stage 'portable') | Out-Null
+        # 便携版: 根目录是启动器 `quiet_md.exe` 和一个空的 `portable` 标记,
+        # 程序本体与运行库在 `Program/`,用户文件都在 `<根>/Data`。
+        $pkg = Join-Path $output ([guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Force (Join-Path $pkg 'Program') | Out-Null
+        Copy-Item (Join-Path $stage 'quiet_md_launcher.exe') (Join-Path $pkg 'quiet_md.exe') -Force
+        Copy-Item (Join-Path $stage 'quiet_md.exe') (Join-Path $pkg 'Program/quiet_md.exe') -Force
+        Copy-Item (Join-Path $stage 'vcruntime140.dll') (Join-Path $pkg 'Program/vcruntime140.dll') -Force
+        Copy-Item (Join-Path $stage 'LICENSE'), (Join-Path $stage 'THIRD_PARTY.md') $pkg -Force
+        New-Item -ItemType File -Force (Join-Path $pkg 'portable') | Out-Null
         $zipName = "quiet-md-$version-windows-x64-portable.zip"
         $zip = Join-Path $output $zipName
-        Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -Force
+        Compress-Archive -Path (Join-Path $pkg '*') -DestinationPath $zip -Force
         $zipHash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
         [System.IO.File]::WriteAllText("$zip.sha256", "$zipHash  $zipName`n", [System.Text.Encoding]::ASCII)
         Write-Output "$mode portable: $zip"

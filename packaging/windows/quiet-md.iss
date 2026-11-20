@@ -53,8 +53,9 @@ FinishedLabel=Quiet.md is ready. A quiet place for your notes.
 Name: "desktopicon"; Description: "Create a desktop shortcut"; Flags: unchecked
 
 [Files]
-Source: "{#AppSource}\quiet_md.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#AppSource}\vcruntime140.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#AppSource}\quiet_md_launcher.exe"; DestDir: "{app}"; DestName: "quiet_md.exe"; Flags: ignoreversion
+Source: "{#AppSource}\quiet_md.exe"; DestDir: "{app}\Program"; Flags: ignoreversion
+Source: "{#AppSource}\vcruntime140.dll"; DestDir: "{app}\Program"; Flags: ignoreversion
 Source: "..\..\LICENSE"; DestDir: "{app}"
 Source: "..\..\THIRD_PARTY.md"; DestDir: "{app}"
 
